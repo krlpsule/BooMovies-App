@@ -1,6 +1,6 @@
-from http.client import HTTPException
 
-from fastapi import FastAPI, Depends
+from sqlalchemy.orm import joinedload
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models
@@ -52,7 +52,6 @@ def get_movie_reviews(db: Session = Depends(get_db)):
 
 @app.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Kullanıcıyı veritabanında ara
     db_user = db.query(models.User).filter(
         models.User.Username == user.Username, 
         models.User.Password_ == user.Password_
@@ -139,3 +138,31 @@ def add_movie_review(review: MovieReviewCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_review)
     return new_review
+
+@app.get("/user/{user_id}/book_reviews")
+def get_user_book_reviews(user_id: int, db: Session = Depends(get_db)):
+    # Sadece o kullanıcıya ait yorumları getirir
+    reviews = db.query(models.BookReview).filter(models.BookReview.UserID == user_id).all()
+    return reviews
+
+@app.get("/user/{user_id}/movie_reviews")
+def get_user_movie_reviews(user_id: int, db: Session = Depends(get_db)):
+    # Sadece o kullanıcıya ait yorumları getirir
+    reviews = db.query(models.MovieReview).filter(models.MovieReview.UserID == user_id).all()
+    return reviews
+
+@app.get("/user/{user_id}/book_reviews")
+def get_user_book_reviews(user_id: int, db: Session = Depends(get_db)):
+   
+    reviews = db.query(models.BookReview).join(models.Book).filter(models.BookReview.UserID == user_id).all()
+    
+   
+    result = []
+    for review in reviews:
+        book_title = db.query(models.Book.Title).filter(models.Book.BookID == review.BookID).scalar()
+        result.append({
+            "Title": book_title,
+            "Rating": review.Rating,
+            "ReviewText": review.ReviewText
+        })
+    return result

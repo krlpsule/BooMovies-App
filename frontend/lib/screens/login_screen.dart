@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/internal_api_service.dart';
 import 'home_screen.dart';
 import 'sign_up_screen.dart';
+import '../services/user_manager.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -27,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (userId != null) {
           // Giriş başarılı
+          UserManager().setUserId(userId); // Kullanıcı ID'sini UserManager'a kaydet
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => HomeScreen()),
@@ -87,8 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-              // ... ElevatedButton'ın hemen bittiği yerin altına şunu ekle ...
-              SizedBox(height: 16), // Biraz boşluk bırakalım
+              SizedBox(height: 16), 
               TextButton(
                 onPressed: () {
                   Navigator.push(

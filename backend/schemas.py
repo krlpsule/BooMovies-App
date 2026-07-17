@@ -10,7 +10,6 @@ class MovieCreate(BaseModel):
     Genre: str
     Plot: str
 
-
 class BookCreate(BaseModel):
     Title: str
     Author: str
