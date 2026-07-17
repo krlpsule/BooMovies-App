@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; 
 import '../services/internal_api_service.dart';
-import '../services/user_manager.dart';
+import '../services/user_manager.dart'; 
 
 class BookListScreen extends StatelessWidget {
   final InternalApiService _apiService = InternalApiService();
@@ -9,14 +10,16 @@ class BookListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = UserManager().userId; // Giriş yapan kullanıcının ID'si
+    final userManager = context.watch<UserManager>();
+    final userId = userManager.userId;
 
-    if (userId == null) return const Center(child: Text("Giriş yapmalısınız."));
+    if (userId == null) {
+      return const Center(child: Text("Giriş yapmalısınız."));
+    }
 
     return FutureBuilder<List<dynamic>>(
-      future: _apiService.getUserBookReviews(userId),
+      future: _apiService.getUserLibrary(userId),
       builder: (context, snapshot) {
-        print("Gelen Kitap Verisi: ${snapshot.data}");
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -28,14 +31,16 @@ class BookListScreen extends StatelessWidget {
         return ListView.builder(
           itemCount: books.length,
           itemBuilder: (context, index) {
-  final book = books[index];
-  return ListTile(
-    // Artık yukarıdaki endpoint sayesinde "Title" anahtarı dolu gelecek!
-    title: Text(book['Title'] ?? 'Başlıksız Kitap'), 
-    subtitle: Text("Puan: ${book['Rating'] ?? '0'}"),
-    trailing: const Icon(Icons.info_outline),
-  );
-},
+            final book = books[index];
+            return ListTile(
+              title: Text(book['Title'] ?? 'Başlıksız Kitap'),
+              subtitle: Text("Puan: ${book['Rating'] ?? '0'}"),
+              trailing: const Icon(Icons.info_outline),
+              onTap: () {
+                // Detay sayfasına geçiş için buraya Navigator eklenebilir
+              },
+            );
+          },
         );
       },
     );

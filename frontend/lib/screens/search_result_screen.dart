@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Provider paketi
 import 'home_screen.dart';
 import '../services/google_books_service.dart';
 import '../services/tmdb_service.dart';
 import '../services/internal_api_service.dart';
+import '../services/user_manager.dart'; // UserManager importu
 
 class SearchResultsScreen extends StatelessWidget {
   final String query;
@@ -49,6 +51,18 @@ class SearchResultsScreen extends StatelessWidget {
                 title: Text(title),
                 trailing: const Icon(Icons.add_circle_outline),
                 onTap: () async {
+                 
+                  final int? currentUserId = context.read<UserManager>().userId;
+
+                  if (currentUserId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Oturum bulunamadı. Lütfen giriş yapın."),
+                      ),
+                    );
+                    return;
+                  }
+
                   // 1. Veri Hazırlama
                   final Map<String, dynamic> dataToSend = searchType == 'book'
                       ? {
@@ -69,30 +83,59 @@ class SearchResultsScreen extends StatelessWidget {
                           "Plot": item['overview'] ?? "Özet yok.",
                         };
 
-                  // 2. Servis Çağrısı ve Yönlendirme
                   try {
+                    // 2. Aşama: Veritabanına Ekle
                     final result = searchType == 'book'
                         ? await _apiService.addOrGetBook(dataToSend)
                         : await _apiService.addOrGetMovie(dataToSend);
 
-                    if (result != null && context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => HomeScreen(
-                            initialIndex: searchType == 'book' ? 0 : 1,
+                    if (result != null) {
+                      bool isAddedToList = false;
+
+                      // 3. Aşama: Kullanıcı Listesine Ekle
+                      if (searchType == 'book') {
+                        isAddedToList = await _apiService.addToLibrary(
+                          currentUserId,
+                          result['BookID'],
+                        );
+                      } else {
+                        isAddedToList = await _apiService.addToWatchlist(
+                          currentUserId,
+                          result['MovieID'],
+                        );
+                      }
+
+                      // 4. Aşama: Başarılıysa Yönlendir
+                      if (isAddedToList && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("$title listenize eklendi!")),
+                        );
+
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HomeScreen(
+                              initialIndex: searchType == 'book' ? 0 : 1,
+                            ),
                           ),
-                        ),
-                        (route) => false,
-                      );
+                          (route) => false,
+                        );
+                      } else if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Bu içerik zaten listenizde."),
+                          ),
+                        );
+                      }
                     }
                   } catch (e) {
-                    print("Hata: $e");
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Kaydederken bir hata oluştu!"),
-                      ),
-                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Kaydederken bir hata oluştu!"),
+                        ),
+                      );
+                    }
                   }
                 },
               );

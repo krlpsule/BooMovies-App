@@ -33,3 +33,12 @@ class MovieReviewCreate(BaseModel):
     MovieID: int
     Rating: int 
     ReviewText: str
+
+
+class UserLibraryCreate(BaseModel):
+    UserID: int
+    BookID: int
+
+class UserWatchlistCreate(BaseModel):
+    UserID: int
+    MovieID: int    

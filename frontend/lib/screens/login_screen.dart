@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Provider paketini import ettik
 import '../services/internal_api_service.dart';
 import 'home_screen.dart';
 import 'sign_up_screen.dart';
@@ -27,14 +28,14 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (userId != null) {
-          // Giriş başarılı
-          UserManager().setUserId(userId); // Kullanıcı ID'sini UserManager'a kaydet
+          
+          Provider.of<UserManager>(context, listen: false).setUserId(userId);
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => HomeScreen()),
           );
         } else {
-          // Hatalı giriş
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Hatalı kullanıcı adı veya şifre!")),
           );
@@ -88,8 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         minimumSize: Size(double.infinity, 50),
                       ),
                     ),
-
-              SizedBox(height: 16), 
+              SizedBox(height: 16),
               TextButton(
                 onPressed: () {
                   Navigator.push(

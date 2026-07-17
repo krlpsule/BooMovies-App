@@ -20,7 +20,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() => _isLoading = true);
 
       try {
-        // Burada kendi API'nizdeki add_user yapısını kullanıyoruz
         await _apiService.addUser(
           _nameController.text,
           _usernameController.text,
@@ -28,16 +27,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _passwordController.text,
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Kayıt başarılı! Giriş yapabilirsiniz.")),
-        );
-        Navigator.pop(context); // Login ekranına geri dön
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Kayıt başarılı! Giriş yapabilirsiniz."),
+            ),
+          );
+          Navigator.pop(context); // Giriş ekranına güvenle dön
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Kayıt başarısız: $e")),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Kayıt başarısız: $e")));
+        }
       } finally {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -45,22 +52,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Kayıt Ol")),
+      appBar: AppBar(title: const Text("Kayıt Ol")),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(controller: _nameController, decoration: InputDecoration(labelText: "Ad Soyad")),
-              TextFormField(controller: _usernameController, decoration: InputDecoration(labelText: "Kullanıcı Adı")),
-              TextFormField(controller: _emailController, decoration: InputDecoration(labelText: "E-posta")),
-              TextFormField(controller: _passwordController, decoration: InputDecoration(labelText: "Şifre",), obscureText: true),
-              SizedBox(height: 20),
-              _isLoading ? CircularProgressIndicator() : ElevatedButton(
-                onPressed: _handleSignUp,
-                child: Text("Kayıt Ol"),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: "Ad Soyad"),
               ),
+              TextFormField(
+                controller: _usernameController,
+                decoration: const InputDecoration(labelText: "Kullanıcı Adı"),
+              ),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: "E-posta"),
+              ),
+              TextFormField(
+                controller: _passwordController,
+                decoration: const InputDecoration(labelText: "Şifre"),
+                obscureText: true,
+              ),
+              const SizedBox(height: 20),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _handleSignUp,
+                      child: const Text("Kayıt Ol"),
+                    ),
             ],
           ),
         ),

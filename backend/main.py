@@ -1,16 +1,13 @@
-
-from sqlalchemy.orm import joinedload
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models
-from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLogin
+from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate
 
-
+# Veritabanı tablolarını oluştur
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
 
 def get_db():
     db = SessionLocal()
@@ -18,109 +15,79 @@ def get_db():
         yield db
     finally:
         db.close()
-# main.py en tepeye ekle
+
+# --- Middleware (İstekleri loglama) ---
 @app.middleware("http")
 async def log_requests(request, call_next):
     print(f"Gelen istek: {request.method} {request.url}")
     response = await call_next(request)
-    return response        
+    return response
 
+# --- GET ENDPOINTLERİ ---
 @app.get("/books")
 def get_books(db: Session = Depends(get_db)):
-    books = db.query(models.Book).all()
-    return books
+    return db.query(models.Book).all()
 
 @app.get("/movies")
 def get_movies(db: Session = Depends(get_db)):
-    movies = db.query(models.Movie).all()
-    return movies
+    return db.query(models.Movie).all()
 
 @app.get("/users")
 def get_users(db: Session = Depends(get_db)):
-    users = db.query(models.User).all()
-    return users
+    return db.query(models.User).all()
 
 @app.get("/book_reviews")
 def get_book_reviews(db: Session = Depends(get_db)):
-    reviews = db.query(models.BookReview).all()
-    return reviews
+    return db.query(models.BookReview).all()
 
 @app.get("/movie_reviews")
 def get_movie_reviews(db: Session = Depends(get_db)):
-    reviews = db.query(models.MovieReview).all()
-    return reviews
+    return db.query(models.MovieReview).all()
 
+# --- AUTH & USER ---
 @app.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(
         models.User.Username == user.Username, 
         models.User.Password_ == user.Password_
     ).first()
-    
     if not db_user:
         raise HTTPException(status_code=400, detail="Hatalı kullanıcı adı veya şifre")
-    
     return {"message": "Giriş başarılı", "UserID": db_user.UserID}
-
 
 @app.post("/add_user")
 def add_user(user: UserCreate, db: Session = Depends(get_db)):
-    new_user = models.User( 
-        NameSurname=user.NameSurname,
-        Username=user.Username,
-        Email=user.Email,
-        Password_=user.Password_
-    ) 
+    new_user = models.User(NameSurname=user.NameSurname, Username=user.Username, Email=user.Email, Password_=user.Password_) 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
+# --- CONTENT MANAGEMENT ---
 @app.post("/add_movie_if_not_exists")
 def add_movie_if_not_exists(movie: MovieCreate, db: Session = Depends(get_db)):   
-    existing_movie = db.query(models.Movie).filter(models.Movie.Title == movie.Title).first()
-    
-    if existing_movie:
-        return existing_movie 
-    new_movie = models.Movie(
-        Title=movie.Title,
-        Director=movie.Director,
-        Genre=movie.Genre,
-        Plot=movie.Plot
-    )
+    existing = db.query(models.Movie).filter(models.Movie.Title == movie.Title).first()
+    if existing: return existing 
+    new_movie = models.Movie(Title=movie.Title, Director=movie.Director, Genre=movie.Genre, Plot=movie.Plot)
     db.add(new_movie)
     db.commit()
     db.refresh(new_movie)
     return new_movie
 
-
 @app.post("/add_book_if_not_exists")
 def add_book_if_not_exists(book: BookCreate, db: Session = Depends(get_db)):
-   
-    existing_book = db.query(models.Book).filter(models.Book.Title == book.Title).first()
-    
-    if existing_book:
-        return existing_book 
-
-    new_book = models.Book(
-        Title=book.Title,
-        Author=book.Author,
-        Genre=book.Genre,
-        Summary=book.Summary
-    )
+    existing = db.query(models.Book).filter(models.Book.Title == book.Title).first()
+    if existing: return existing 
+    new_book = models.Book(Title=book.Title, Author=book.Author, Genre=book.Genre, Summary=book.Summary)
     db.add(new_book)
     db.commit()
     db.refresh(new_book)
     return new_book
 
+# --- REVIEW ENDPOINTLERİ ---
 @app.post("/add_book_review")
 def add_book_review(review: BookReviewCreate, db: Session = Depends(get_db)):
-    new_review = models.BookReview(
-        UserID=review.UserID,
-        BookID=review.BookID,
-        Rating=review.Rating,
-        ReviewText=review.ReviewText
-    )
+    new_review = models.BookReview(UserID=review.UserID, BookID=review.BookID, Rating=review.Rating, ReviewText=review.ReviewText)
     db.add(new_review)
     db.commit()
     db.refresh(new_review)
@@ -128,41 +95,49 @@ def add_book_review(review: BookReviewCreate, db: Session = Depends(get_db)):
 
 @app.post("/add_movie_review")
 def add_movie_review(review: MovieReviewCreate, db: Session = Depends(get_db)):
-    new_review = models.MovieReview(
-        UserID=review.UserID,
-        MovieID=review.MovieID,
-        Rating=review.Rating,
-        ReviewText=review.ReviewText
-    )
+    new_review = models.MovieReview(UserID=review.UserID, MovieID=review.MovieID, Rating=review.Rating, ReviewText=review.ReviewText)
     db.add(new_review)
     db.commit()
     db.refresh(new_review)
     return new_review
 
-@app.get("/user/{user_id}/book_reviews")
-def get_user_book_reviews(user_id: int, db: Session = Depends(get_db)):
-    # Sadece o kullanıcıya ait yorumları getirir
-    reviews = db.query(models.BookReview).filter(models.BookReview.UserID == user_id).all()
-    return reviews
+# --- LIBRARY & WATCHLIST (YENİ ENDPOINTLER) ---
+@app.post("/add_to_library")
+def add_to_library(entry: UserLibraryCreate, db: Session = Depends(get_db)):
+    if db.query(models.UserLibrary).filter(models.UserLibrary.UserID == entry.UserID, models.UserLibrary.BookID == entry.BookID).first():
+        return {"message": "Kitap zaten kütüphanenizde var."}
+    new_entry = models.UserLibrary(UserID=entry.UserID, BookID=entry.BookID)
+    db.add(new_entry)
+    db.commit()
+    return {"message": "Kitap kütüphaneye eklendi.", "BookID": entry.BookID}
 
-@app.get("/user/{user_id}/movie_reviews")
-def get_user_movie_reviews(user_id: int, db: Session = Depends(get_db)):
-    # Sadece o kullanıcıya ait yorumları getirir
-    reviews = db.query(models.MovieReview).filter(models.MovieReview.UserID == user_id).all()
-    return reviews
+@app.post("/add_to_watchlist")
+def add_to_watchlist(entry: UserWatchlistCreate, db: Session = Depends(get_db)):
+    if db.query(models.UserWatchlist).filter(models.UserWatchlist.UserID == entry.UserID, models.UserWatchlist.MovieID == entry.MovieID).first():
+        return {"message": "Film zaten listenizde var."}
+    new_entry = models.UserWatchlist(UserID=entry.UserID, MovieID=entry.MovieID)
+    db.add(new_entry)
+    db.commit()
+    return {"message": "Film listeye eklendi.", "MovieID": entry.MovieID}
 
-@app.get("/user/{user_id}/book_reviews")
-def get_user_book_reviews(user_id: int, db: Session = Depends(get_db)):
-   
-    reviews = db.query(models.BookReview).join(models.Book).filter(models.BookReview.UserID == user_id).all()
-    
-   
+@app.get("/user/{user_id}/library")
+def get_user_library(user_id: int, db: Session = Depends(get_db)):
+    library = db.query(models.UserLibrary).filter(models.UserLibrary.UserID == user_id).all()
     result = []
-    for review in reviews:
-        book_title = db.query(models.Book.Title).filter(models.Book.BookID == review.BookID).scalar()
-        result.append({
-            "Title": book_title,
-            "Rating": review.Rating,
-            "ReviewText": review.ReviewText
-        })
+    for entry in library:
+        book = db.query(models.Book).filter(models.Book.BookID == entry.BookID).first()
+        if book:
+            review = db.query(models.BookReview).filter(models.BookReview.UserID == user_id, models.BookReview.BookID == entry.BookID).first()
+            result.append({"BookID": book.BookID, "Title": book.Title, "Author": book.Author, "Rating": review.Rating if review else "Yok"})
+    return result
+
+@app.get("/user/{user_id}/watchlist")
+def get_user_watchlist(user_id: int, db: Session = Depends(get_db)):
+    watchlist = db.query(models.UserWatchlist).filter(models.UserWatchlist.UserID == user_id).all()
+    result = []
+    for entry in watchlist:
+        movie = db.query(models.Movie).filter(models.Movie.MovieID == entry.MovieID).first()
+        if movie:
+            review = db.query(models.MovieReview).filter(models.MovieReview.UserID == user_id, models.MovieReview.MovieID == entry.MovieID).first()
+            result.append({"MovieID": movie.MovieID, "Title": movie.Title, "Director": movie.Director, "Rating": review.Rating if review else "Yok"})
     return result

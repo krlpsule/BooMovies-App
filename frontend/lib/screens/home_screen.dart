@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Provider paketini ekledik
 import '../screens/search_result_screen.dart';
-import '../services/user_manager.dart';
+import '../services/user_manager.dart'; // UserManager importu
 import '../screens/movie_list_screen.dart';
 import '../screens/book_list_screen.dart';
-
-final int? currentUserId = UserManager().userId;
 
 class HomeScreen extends StatefulWidget {
   final int initialIndex;
@@ -25,7 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _currentIndex = widget.initialIndex;
   }
 
-  // --- Arama Filtreleri ---
   Widget _buildSearchFilters() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -48,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Modern Arama Çubuğu ---
   Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -80,10 +77,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Provider ile kullanıcıyı dinliyoruz
+    final userManager = context.watch<UserManager>();
+
     final List<Widget> pages = [
       BookListScreen(),
       MovieListScreen(),
-      const Center(child: Text("Profil Ayarları")),
+      Center(
+        child: Text(
+          "Profil - Kullanıcı ID: ${userManager.userId ?? 'Giriş Yapılmadı'}",
+        ),
+      ),
     ];
 
     return Scaffold(

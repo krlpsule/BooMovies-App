@@ -43,3 +43,17 @@ class MovieReview(Base):
     Rating = Column(Integer, nullable=False)
     ReviewText = Column(Text)  
     
+
+class UserLibrary(Base):
+    __tablename__ = "UserLibrary"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    UserID = Column(Integer, ForeignKey("Users.UserID")) 
+    BookID = Column(Integer, ForeignKey("Books.BookID"))
+
+class UserWatchlist(Base):
+    __tablename__ = "UserWatchlist"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    UserID = Column(Integer, ForeignKey("Users.UserID"))
+    MovieID = Column(Integer, ForeignKey("Movies.MovieID"))    

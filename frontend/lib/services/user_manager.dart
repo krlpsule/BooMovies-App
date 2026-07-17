@@ -1,18 +1,17 @@
+import 'package:flutter/material.dart';
 
-class UserManager {
-  static final UserManager _instance = UserManager._internal();
-  factory UserManager() => _instance;
-  UserManager._internal();
-
+class UserManager extends ChangeNotifier {
   int? _userId;
 
   int? get userId => _userId;
 
   void setUserId(int id) {
     _userId = id;
+    notifyListeners(); 
   }
 
   void logout() {
     _userId = null;
+    notifyListeners();
   }
 }

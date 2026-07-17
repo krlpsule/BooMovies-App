@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Provider paketi
 import '../services/internal_api_service.dart';
-import '../services/user_manager.dart';
+import '../services/user_manager.dart'; // UserManager importu
 
 class MovieListScreen extends StatelessWidget {
   final InternalApiService _apiService = InternalApiService();
@@ -9,12 +10,16 @@ class MovieListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = UserManager().userId; // Giriş yapan kullanıcının ID'si
+  
+    final userManager = context.watch<UserManager>();
+    final userId = userManager.userId;
 
-    if (userId == null) return const Center(child: Text("Giriş yapmalısınız."));
+    if (userId == null) {
+      return const Center(child: Text("Giriş yapmalısınız."));
+    }
 
     return FutureBuilder<List<dynamic>>(
-      future: _apiService.getUserMovieReviews(userId),
+      future: _apiService.getUserWatchlist(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -33,7 +38,7 @@ class MovieListScreen extends StatelessWidget {
               subtitle: Text("Puan: ${movie['Rating'] ?? 'Yok'}"),
               trailing: const Icon(Icons.info_outline),
               onTap: () {
-                // Burada "Yorum Düzenle" veya "Sil" seçeneklerini açabiliriz
+                // Detay sayfasına geçiş veya işlem seçenekleri buraya gelecek
               },
             );
           },
