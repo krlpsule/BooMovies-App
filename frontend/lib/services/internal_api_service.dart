@@ -122,7 +122,7 @@ class InternalApiService {
     }
     return [];
   }
-  // --- KULLANICI LİSTELERİNE EKLEME İŞLEMLERİ ---
+ 
 
   // --- KULLANICI LİSTELERİNE EKLEME İŞLEMLERİ ---
 
@@ -164,6 +164,35 @@ class InternalApiService {
       print("İzleme listesine eklerken ağ veya kod hatası: $e");
       return false;
     }
+  }
+
+  // --- KİTAP / FİLM DETAY + YORUMLARI ÇEKME ---
+  Future<Map<String, dynamic>?> getBookDetails(int bookId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/book/$bookId/details'),
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+    } catch (e) {
+      print("Kitap detayını çekerken hata: $e");
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getMovieDetails(int movieId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/movie/$movieId/details'),
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+    } catch (e) {
+      print("Film detayını çekerken hata: $e");
+    }
+    return null;
   }
 
   // --- KULLANICI LİSTELERİNİ ÇEKME İŞLEMLERİ ---

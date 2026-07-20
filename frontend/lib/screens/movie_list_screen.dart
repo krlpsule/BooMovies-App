@@ -1,16 +1,180 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider paketi
+import 'package:provider/provider.dart';
 import '../services/internal_api_service.dart';
-import '../services/user_manager.dart'; // UserManager importu
+import '../services/user_manager.dart';
+import 'movie_review_screen.dart';
 
-class MovieListScreen extends StatelessWidget {
+class MovieListScreen extends StatefulWidget {
+  const MovieListScreen({super.key});
+
+  @override
+  State<MovieListScreen> createState() => _MovieListScreenState();
+}
+
+class _MovieListScreenState extends State<MovieListScreen> {
   final InternalApiService _apiService = InternalApiService();
+  late Future<List<dynamic>> _watchlistFuture;
+  int? _currentUserId;
 
-  MovieListScreen({super.key});
+  void _loadWatchlist(int userId) {
+    _currentUserId = userId;
+    _watchlistFuture = _apiService.getUserWatchlist(userId);
+  }
+
+  Future<void> _showReviewDialog(BuildContext context, Map movie, int userId) async {
+    final reviewController = TextEditingController();
+    int selectedRating = 0;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(movie['Title'] ?? 'Film Yorumu'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Puanınız:"),
+                    Row(
+                      children: List.generate(5, (index) {
+                        final starIndex = index + 1;
+                        return IconButton(
+                          icon: Icon(
+                            starIndex <= selectedRating
+                                ? Icons.star
+                                : Icons.star_border,
+                            color: Colors.amber,
+                          ),
+                          onPressed: () {
+                            setDialogState(() => selectedRating = starIndex);
+                          },
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: reviewController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        hintText: "Yorumunuzu yazın...",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text("İptal"),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedRating == 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Lütfen bir puan seçin.")),
+                      );
+                      return;
+                    }
+                    try {
+                      await _apiService.postMovieReview(
+                        userId,
+                        movie['MovieID'],
+                        selectedRating,
+                        reviewController.text,
+                      );
+                      Navigator.pop(dialogContext);
+                      setState(() => _loadWatchlist(userId));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Yorumunuz kaydedildi.")),
+                      );
+                    } catch (e) {
+                      Navigator.pop(dialogContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Hata: $e")),
+                      );
+                    }
+                  },
+                  child: const Text("Kaydet"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showReviewsListDialog(BuildContext context, Map movie) async {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text("${movie['Title'] ?? 'Film'} - Yorumlar"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: FutureBuilder<Map<String, dynamic>?>(
+              future: _apiService.getMovieDetails(movie['MovieID']),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 100,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final reviews =
+                    (snapshot.data?['Reviews'] as List<dynamic>? ?? []);
+                if (reviews.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text("Bu film için henüz yorum yapılmamış."),
+                  );
+                }
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: reviews.map((review) {
+                      final rating = review['Rating'] ?? 0;
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(review['Username'] ?? 'Kullanıcı'),
+                        subtitle: (review['ReviewText'] != null &&
+                                review['ReviewText'].toString().isNotEmpty)
+                            ? Text(review['ReviewText'])
+                            : null,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(5, (i) {
+                            return Icon(
+                              i < rating ? Icons.star : Icons.star_border,
+                              size: 16,
+                              color: Colors.amber,
+                            );
+                          }),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("Kapat"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-  
     final userManager = context.watch<UserManager>();
     final userId = userManager.userId;
 
@@ -18,8 +182,12 @@ class MovieListScreen extends StatelessWidget {
       return const Center(child: Text("Giriş yapmalısınız."));
     }
 
+    if (_currentUserId != userId) {
+      _loadWatchlist(userId);
+    }
+
     return FutureBuilder<List<dynamic>>(
-      future: _apiService.getUserWatchlist(userId),
+      future: _watchlistFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -36,9 +204,46 @@ class MovieListScreen extends StatelessWidget {
             return ListTile(
               title: Text(movie['Title'] ?? 'Bilinmiyor'),
               subtitle: Text("Puan: ${movie['Rating'] ?? 'Yok'}"),
-              trailing: const Icon(Icons.info_outline),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                    tooltip: "Yorum ekle / düzenle",
+                    onPressed: () => _showReviewDialog(context, movie, userId),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.comment_outlined, color: Colors.teal),
+                    tooltip: "Yapılan yorumları gör",
+                    onPressed: () => _showReviewsListDialog(context, movie),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.info_outline),
+                    tooltip: "Detayları ve yorumları gör",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MovieReviewScreen(
+                            movieId: movie['MovieID'],
+                            title: movie['Title'],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
               onTap: () {
-                // Detay sayfasına geçiş veya işlem seçenekleri buraya gelecek
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MovieReviewScreen(
+                      movieId: movie['MovieID'],
+                      title: movie['Title'],
+                    ),
+                  ),
+                );
               },
             );
           },

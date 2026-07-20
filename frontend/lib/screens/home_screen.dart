@@ -85,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
       MovieListScreen(),
       Center(
         child: Text(
-          "Profil - Kullanıcı ID: ${userManager.userId ?? 'Giriş Yapılmadı'}",
+          "Profil - Kullanıcı Adı: ${userManager.getUserNameAsString() ?? 'Giriş Yapılmadı'}",
         ),
       ),
     ];

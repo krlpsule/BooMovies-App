@@ -53,7 +53,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     ).first()
     if not db_user:
         raise HTTPException(status_code=400, detail="Hatalı kullanıcı adı veya şifre")
-    return {"message": "Giriş başarılı", "UserID": db_user.UserID}
+    return {"message": "Giriş başarılı", "Username": db_user.Username}
 
 @app.post("/add_user")
 def add_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -109,7 +109,7 @@ def add_to_library(entry: UserLibraryCreate, db: Session = Depends(get_db)):
     new_entry = models.UserLibrary(UserID=entry.UserID, BookID=entry.BookID)
     db.add(new_entry)
     db.commit()
-    return {"message": "Kitap kütüphaneye eklendi.", "BookID": entry.BookID}
+    return {"message": "Kitap kütüphaneye eklendi."}
 
 @app.post("/add_to_watchlist")
 def add_to_watchlist(entry: UserWatchlistCreate, db: Session = Depends(get_db)):
@@ -118,7 +118,61 @@ def add_to_watchlist(entry: UserWatchlistCreate, db: Session = Depends(get_db)):
     new_entry = models.UserWatchlist(UserID=entry.UserID, MovieID=entry.MovieID)
     db.add(new_entry)
     db.commit()
-    return {"message": "Film listeye eklendi.", "MovieID": entry.MovieID}
+    return {"message": "Film listeye eklendi."}
+
+@app.get("/book/{book_id}/details")
+def get_book_details(book_id: int, db: Session = Depends(get_db)):
+    book = db.query(models.Book).filter(models.Book.BookID == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Kitap bulunamadı")
+
+    reviews = db.query(models.BookReview).filter(models.BookReview.BookID == book_id).all()
+    review_list = []
+    for r in reviews:
+        user = db.query(models.User).filter(models.User.UserID == r.UserID).first()
+        review_list.append({
+            "ReviewID": r.ReviewID,
+            "UserID": r.UserID,
+            "Username": user.Username if user else "Bilinmeyen Kullanıcı",
+            "Rating": r.Rating,
+            "ReviewText": r.ReviewText,
+        })
+
+    return {
+        "BookID": book.BookID,
+        "Title": book.Title,
+        "Author": book.Author,
+        "Genre": book.Genre,
+        "Summary": book.Summary,
+        "Reviews": review_list,
+    }
+
+@app.get("/movie/{movie_id}/details")
+def get_movie_details(movie_id: int, db: Session = Depends(get_db)):
+    movie = db.query(models.Movie).filter(models.Movie.MovieID == movie_id).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Film bulunamadı")
+
+    reviews = db.query(models.MovieReview).filter(models.MovieReview.MovieID == movie_id).all()
+    review_list = []
+    for r in reviews:
+        user = db.query(models.User).filter(models.User.UserID == r.UserID).first()
+        review_list.append({
+            "ReviewID": r.ReviewID,
+            "UserID": r.UserID,
+            "Username": user.Username if user else "Bilinmeyen Kullanıcı",
+            "Rating": r.Rating,
+            "ReviewText": r.ReviewText,
+        })
+
+    return {
+        "MovieID": movie.MovieID,
+        "Title": movie.Title,
+        "Director": movie.Director,
+        "Genre": movie.Genre,
+        "Plot": movie.Plot,
+        "Reviews": review_list,
+    }
 
 @app.get("/user/{user_id}/library")
 def get_user_library(user_id: int, db: Session = Depends(get_db)):
