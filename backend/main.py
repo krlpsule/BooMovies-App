@@ -68,7 +68,8 @@ def add_user(user: UserCreate, db: Session = Depends(get_db)):
 def add_movie_if_not_exists(movie: MovieCreate, db: Session = Depends(get_db)):   
     existing = db.query(models.Movie).filter(models.Movie.Title == movie.Title).first()
     if existing: return existing 
-    new_movie = models.Movie(Title=movie.Title, Director=movie.Director, Genre=movie.Genre, Plot=movie.Plot)
+    # YENİ: PosterUrl eklendi
+    new_movie = models.Movie(Title=movie.Title, Director=movie.Director, Genre=movie.Genre, Plot=movie.Plot, PosterUrl=movie.PosterUrl)
     db.add(new_movie)
     db.commit()
     db.refresh(new_movie)
@@ -78,7 +79,8 @@ def add_movie_if_not_exists(movie: MovieCreate, db: Session = Depends(get_db)):
 def add_book_if_not_exists(book: BookCreate, db: Session = Depends(get_db)):
     existing = db.query(models.Book).filter(models.Book.Title == book.Title).first()
     if existing: return existing 
-    new_book = models.Book(Title=book.Title, Author=book.Author, Genre=book.Genre, Summary=book.Summary)
+    # YENİ: CoverUrl eklendi
+    new_book = models.Book(Title=book.Title, Author=book.Author, Genre=book.Genre, Summary=book.Summary, CoverUrl=book.CoverUrl)
     db.add(new_book)
     db.commit()
     db.refresh(new_book)
@@ -101,7 +103,7 @@ def add_movie_review(review: MovieReviewCreate, db: Session = Depends(get_db)):
     db.refresh(new_review)
     return new_review
 
-# --- LIBRARY & WATCHLIST (YENİ ENDPOINTLER) ---
+# --- LIBRARY & WATCHLIST ---
 @app.post("/add_to_library")
 def add_to_library(entry: UserLibraryCreate, db: Session = Depends(get_db)):
     if db.query(models.UserLibrary).filter(models.UserLibrary.UserID == entry.UserID, models.UserLibrary.BookID == entry.BookID).first():
@@ -144,6 +146,7 @@ def get_book_details(book_id: int, db: Session = Depends(get_db)):
         "Author": book.Author,
         "Genre": book.Genre,
         "Summary": book.Summary,
+        "CoverUrl": book.CoverUrl,
         "Reviews": review_list,
     }
 
@@ -171,6 +174,7 @@ def get_movie_details(movie_id: int, db: Session = Depends(get_db)):
         "Director": movie.Director,
         "Genre": movie.Genre,
         "Plot": movie.Plot,
+        "PosterUrl": movie.PosterUrl, 
         "Reviews": review_list,
     }
 
@@ -182,7 +186,14 @@ def get_user_library(user_id: int, db: Session = Depends(get_db)):
         book = db.query(models.Book).filter(models.Book.BookID == entry.BookID).first()
         if book:
             review = db.query(models.BookReview).filter(models.BookReview.UserID == user_id, models.BookReview.BookID == entry.BookID).first()
-            result.append({"BookID": book.BookID, "Title": book.Title, "Author": book.Author, "Rating": review.Rating if review else "Yok"})
+           
+            result.append({
+                "BookID": book.BookID, 
+                "Title": book.Title, 
+                "Author": book.Author, 
+                "Rating": review.Rating if review else "Yok",
+                "CoverUrl": book.CoverUrl 
+            })
     return result
 
 @app.get("/user/{user_id}/watchlist")
@@ -193,5 +204,12 @@ def get_user_watchlist(user_id: int, db: Session = Depends(get_db)):
         movie = db.query(models.Movie).filter(models.Movie.MovieID == entry.MovieID).first()
         if movie:
             review = db.query(models.MovieReview).filter(models.MovieReview.UserID == user_id, models.MovieReview.MovieID == entry.MovieID).first()
-            result.append({"MovieID": movie.MovieID, "Title": movie.Title, "Director": movie.Director, "Rating": review.Rating if review else "Yok"})
+            
+            result.append({
+                "MovieID": movie.MovieID, 
+                "Title": movie.Title, 
+                "Director": movie.Director, 
+                "Rating": review.Rating if review else "Yok",
+                "PosterUrl": movie.PosterUrl
+            })
     return result

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class UserLogin(BaseModel):
     Username: str
@@ -15,12 +16,14 @@ class BookCreate(BaseModel):
     Author: str
     Genre: str
     Summary: str
+    CoverUrl: Optional[str] = None
 
 class UserCreate(BaseModel):
     NameSurname: str
     Username: str
     Email: str
-    Password_: str    
+    Password_: str   
+    PosterUrl: Optional[str] = None 
 
 class BookReviewCreate(BaseModel):
     UserID: int

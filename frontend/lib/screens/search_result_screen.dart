@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider paketi
+import 'package:provider/provider.dart';
 import 'home_screen.dart';
-import '../services/google_books_service.dart'; 
+import '../services/google_books_service.dart';
 import '../services/tmdb_service.dart';
 import '../services/internal_api_service.dart';
-import '../services/user_manager.dart'; // UserManager importu
+import '../services/user_manager.dart';
 
 class SearchResultsScreen extends StatelessWidget {
   final String query;
@@ -44,12 +44,40 @@ class SearchResultsScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final item = items[index];
 
-            
-              final title = searchType == 'book' ? item.title : item['title'];
+              final title = item.title ?? "Başlıksız";
+
+              final imageUrl = searchType == 'book'
+                  ? item.coverUrl
+                  : item.posterUrl;
 
               return ListTile(
+                leading: imageUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Image.network(
+                          imageUrl,
+                          width: 50,
+                          height: 75,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.broken_image, size: 50),
+                        ),
+                      )
+                    : const Icon(Icons.image, size: 50),
+
                 title: Text(title),
+
+                // Alt başlıkta yazar veya yönetmen bilgisini gösteriyoruz
+                subtitle: Text(
+                  searchType == 'book'
+                      ? (item.author ?? 'Bilinmeyen Yazar')
+                      : (item.director ?? 'Bilinmeyen Yönetmen'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
                 trailing: const Icon(Icons.add_circle_outline),
+
                 onTap: () async {
                   final int? currentUserId = context.read<UserManager>().userId;
 
@@ -62,23 +90,22 @@ class SearchResultsScreen extends StatelessWidget {
                     return;
                   }
 
-                  // 1. Veri Hazırlama
-                  // HATA DÜZELTİLDİ: BookModel özelliklerine uyumlu hale getirildi
-                  final Map<String, dynamic> dataToSend = searchType == 'book'
-                      ? {
-                          "Title": item.title ?? "Başlıksız",
-                          "Author": item.author ?? "Bilinmiyor",
-                          "Genre":
-                              "Genel", // Open Library search endpoint'i kategori garantisi vermez
-                          "Summary":
-                              "Özet yok.", // Open Library search endpoint'i özet dönmez
-                        }
-                      : {
-                          "Title": item['title'] ?? "Başlıksız",
-                          "Director": "Bilinmiyor",
-                          "Genre": "Film",
-                          "Plot": item['overview'] ?? "Özet yok.",
-                        };
+                  // 1. Veri Hazırlama (Nesne özelliklerine nokta ile erişim sağlandı)
+final Map<String, dynamic> dataToSend = searchType == 'book'
+    ? {
+        "Title": item.title ?? "Başlıksız",
+        "Author": item.author ?? "Bilinmiyor",
+        "Genre": "Genel",
+        "Summary": "Özet yok.",
+        "CoverUrl": item.coverUrl,
+      }
+    : {
+        "Title": item.title ?? "Başlıksız",
+        "Director": item.director ?? "Bilinmiyor",
+        "Genre": item.genre ?? "Film",
+        "Plot": item.plot ?? "Özet yok.",
+        "PosterUrl": item.posterUrl, 
+      };
 
                   try {
                     // 2. Aşama: Veritabanına Ekle

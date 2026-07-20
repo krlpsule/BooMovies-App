@@ -17,7 +17,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late int _currentIndex;
-  String _searchType = 'book';
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -26,29 +25,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _currentIndex = widget.initialIndex;
   }
 
-  Widget _buildSearchFilters() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          ChoiceChip(
-            label: const Text("Kitap Ara"),
-            selected: _searchType == 'book',
-            onSelected: (bool selected) => setState(() => _searchType = 'book'),
-          ),
-          const SizedBox(width: 10),
-          ChoiceChip(
-            label: const Text("Film Ara"),
-            selected: _searchType == 'movie',
-            onSelected: (bool selected) =>
-                setState(() => _searchType = 'movie'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSearchBar() {
+    // Bulunulan sekmeye göre arama tipini ve ipucu metnini dinamik belirliyoruz
+    final String currentSearchType = _currentIndex == 0 ? 'book' : 'movie';
+    final String hintText = _currentIndex == 0
+        ? "Kitap ismi ara..."
+        : "Film ismi ara...";
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: TextField(
@@ -58,16 +41,16 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    SearchResultsScreen(query: value, searchType: _searchType),
+                builder: (context) => SearchResultsScreen(
+                  query: value,
+                  searchType: currentSearchType, // Dinamik tip gönderiliyor
+                ),
               ),
             );
           }
         },
         decoration: InputDecoration(
-          hintText: _searchType == 'book'
-              ? "Kitap ismi ara..."
-              : "Film ismi ara...",
+          hintText: hintText,
           prefixIcon: const Icon(Icons.search),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
           filled: true,
@@ -87,26 +70,26 @@ class _HomeScreenState extends State<HomeScreen> {
       MovieListScreen(),
       const AiAssistantScreen(),
       const UserInfoScreen(),
-      Center(
-        child: Text(
-          "Profil - Kullanıcı Adı: ${userManager.getUserNameAsString() ?? 'Giriş Yapılmadı'}",
-        ),
-      ),
     ];
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(title: const Text("BooMovies "), centerTitle: true),
+      appBar: AppBar(title: const Text("BooMovies"), centerTitle: true),
       body: Column(
         children: [
-          _buildSearchFilters(),
-          _buildSearchBar(),
+          if (_currentIndex == 0 || _currentIndex == 1) _buildSearchBar(),
+
           Expanded(child: pages[_currentIndex]),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        onDestinationSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+            _searchController.clear();
+          });
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.book_outlined),

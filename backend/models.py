@@ -8,6 +8,7 @@ class Book(Base):
     Author = Column(String(255))
     Genre = Column(String(100))
     Summary = Column(Text)
+    CoverUrl = Column(String(500), nullable=True)
 
 class Movie(Base):
     __tablename__ = "Movies"
@@ -16,6 +17,7 @@ class Movie(Base):
     Director = Column(String(255))
     Genre = Column(String(100))
     Plot = Column(Text)
+    PosterUrl = Column(String(500), nullable=True)
 
 class User(Base):
     __tablename__ = "Users"

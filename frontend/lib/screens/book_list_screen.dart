@@ -201,7 +201,22 @@ class _BookListScreenState extends State<BookListScreen> {
           itemCount: books.length,
           itemBuilder: (context, index) {
             final book = books[index];
+            
+           
+            final String? coverUrl = book['CoverUrl'];
+
             return ListTile(
+              // Görseli buraya ekliyoruz
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.network(
+                  coverUrl ?? 'https://via.placeholder.com/400x600.png?text=Kapak+Yok',
+                  width: 50,
+                  height: 75,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 40, color: Colors.blueGrey),
+                ),
+              ),
               title: Text(book['Title'] ?? 'Başlıksız Kitap'),
               subtitle: Text("Puan: ${book['Rating'] ?? '0'}"),
               trailing: Row(

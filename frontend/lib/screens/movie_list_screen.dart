@@ -21,7 +21,11 @@ class _MovieListScreenState extends State<MovieListScreen> {
     _watchlistFuture = _apiService.getUserWatchlist(userId);
   }
 
-  Future<void> _showReviewDialog(BuildContext context, Map movie, int userId) async {
+  Future<void> _showReviewDialog(
+    BuildContext context,
+    Map movie,
+    int userId,
+  ) async {
     final reviewController = TextEditingController();
     int selectedRating = 0;
 
@@ -93,9 +97,9 @@ class _MovieListScreenState extends State<MovieListScreen> {
                       );
                     } catch (e) {
                       Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Hata: $e")),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text("Hata: $e")));
                     }
                   },
                   child: const Text("Kaydet"),
@@ -141,7 +145,8 @@ class _MovieListScreenState extends State<MovieListScreen> {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(review['Username'] ?? 'Kullanıcı'),
-                        subtitle: (review['ReviewText'] != null &&
+                        subtitle:
+                            (review['ReviewText'] != null &&
                                 review['ReviewText'].toString().isNotEmpty)
                             ? Text(review['ReviewText'])
                             : null,
@@ -201,7 +206,24 @@ class _MovieListScreenState extends State<MovieListScreen> {
           itemCount: movies.length,
           itemBuilder: (context, index) {
             final movie = movies[index];
+
+            // Veritabanından gelen görsel URL'si (Backend'de 'PosterUrl' olarak tutulduğunu varsayıyoruz)
+            final String? posterUrl = movie['PosterUrl'];
+
             return ListTile(
+              // Film afişini buraya ekliyoruz
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.network(
+                  posterUrl ??
+                      'https://via.placeholder.com/500x750.png?text=Afis+Yok',
+                  width: 50,
+                  height: 75,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.movie, size: 40, color: Colors.blueGrey),
+                ),
+              ),
               title: Text(movie['Title'] ?? 'Bilinmiyor'),
               subtitle: Text("Puan: ${movie['Rating'] ?? 'Yok'}"),
               trailing: Row(
@@ -213,7 +235,10 @@ class _MovieListScreenState extends State<MovieListScreen> {
                     onPressed: () => _showReviewDialog(context, movie, userId),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.comment_outlined, color: Colors.teal),
+                    icon: const Icon(
+                      Icons.comment_outlined,
+                      color: Colors.teal,
+                    ),
                     tooltip: "Yapılan yorumları gör",
                     onPressed: () => _showReviewsListDialog(context, movie),
                   ),
