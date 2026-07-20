@@ -35,7 +35,7 @@ def _call_gemini(prompt: str, schema: dict) -> dict | None:
             GEMINI_URL,
             params={"key": GEMINI_API_KEY},
             json=payload,
-            timeout=20,
+            timeout=60,
         )
         if response.status_code != 200:
             print(f"Gemini API hatası: {response.status_code} - {response.text[:300]}")
