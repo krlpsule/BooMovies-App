@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider paketini ekledik
+import 'package:provider/provider.dart';
 import '../screens/search_result_screen.dart';
-import '../services/user_manager.dart'; // UserManager importu
+import '../services/user_manager.dart';
 import '../screens/movie_list_screen.dart';
 import '../screens/book_list_screen.dart';
+import '../screens/ai_assistant_screen.dart';
+import 'user_info_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialIndex;
@@ -83,6 +85,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> pages = [
       BookListScreen(),
       MovieListScreen(),
+      const AiAssistantScreen(),
+      const UserInfoScreen(),
       Center(
         child: Text(
           "Profil - Kullanıcı Adı: ${userManager.getUserNameAsString() ?? 'Giriş Yapılmadı'}",
@@ -92,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(title: const Text("BooMovies & Books"), centerTitle: true),
+      appBar: AppBar(title: const Text("BooMovies "), centerTitle: true),
       body: Column(
         children: [
           _buildSearchFilters(),
@@ -111,6 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.movie_outlined),
             label: 'Filmlerim',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome),
+            label: 'Yapay Zeka',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

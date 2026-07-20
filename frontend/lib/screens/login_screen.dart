@@ -22,14 +22,17 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = true);
 
       try {
-        int? userId = await _apiService.login(
+        final result = await _apiService.login(
           _usernameController.text,
           _passwordController.text,
         );
 
-        if (userId != null) {
-          
-          Provider.of<UserManager>(context, listen: false).setUserId(userId);
+        if (result != null && result['UserID'] != null) {
+          final userManager = Provider.of<UserManager>(context, listen: false);
+          userManager.setUserId(result['UserID']);
+          if (result['Username'] != null) {
+            userManager.setUserName(result['Username']);
+          }
 
           Navigator.pushReplacement(
             context,

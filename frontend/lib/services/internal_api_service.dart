@@ -5,7 +5,7 @@ class InternalApiService {
   final String baseUrl = "http://10.0.2.2:8000";
 
   // --- KULLANICI İŞLEMLERİ ---
-  Future<int?> login(String username, String password) async {
+  Future<Map<String, dynamic>?> login(String username, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
       headers: {"Content-Type": "application/json"},
@@ -14,7 +14,7 @@ class InternalApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return data['UserID'];
+      return {"UserID": data['UserID'], "Username": data['Username']};
     }
     return null;
   }

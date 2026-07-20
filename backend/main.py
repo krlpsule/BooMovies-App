@@ -53,7 +53,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     ).first()
     if not db_user:
         raise HTTPException(status_code=400, detail="Hatalı kullanıcı adı veya şifre")
-    return {"message": "Giriş başarılı", "Username": db_user.Username}
+    return {"message": "Giriş başarılı", "UserID": db_user.UserID, "Username": db_user.Username}
 
 @app.post("/add_user")
 def add_user(user: UserCreate, db: Session = Depends(get_db)):

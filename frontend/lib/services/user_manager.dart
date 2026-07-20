@@ -11,12 +11,18 @@ class UserManager extends ChangeNotifier {
     notifyListeners(); 
   }
 
+  void setUserName(String name) {
+    _userName = name;
+    notifyListeners();
+  }
+
   String? getUserNameAsString() {
     return _userName?.toString();
   }
 
   void logout() {
     _userId = null;
+    _userName = null;
     notifyListeners();
   }
 }

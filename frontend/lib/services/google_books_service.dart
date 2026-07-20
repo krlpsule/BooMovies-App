@@ -1,35 +1,33 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../models/book_model.dart';
 
-class GoogleBooksService {
-  final String _apiKey = dotenv.env['GOOGLE_BOOKS_API_KEY'] ?? "";
-  final String _baseUrl = "https://www.googleapis.com/books/v1/volumes";
-
-  Future<List<dynamic>> searchBooks(String query) async {
-    
-    final String url =
-        "$_baseUrl?q=${Uri.encodeQueryComponent(query)}&key=$_apiKey&maxResults=10";
+class OpenLibraryService {
+  Future<List<BookModel>> searchBooks(String query) async {
+    // Kitap adı ile arama yapan endpoint
+    final url = Uri.parse('https://openlibrary.org/search.json?q=$query');
 
     try {
       final response = await http.get(
-        Uri.parse(url),
-        headers: {"Accept": "application/json"},
+        url,
+        headers: {
+          'User-Agent':
+              'BooMoviesApp (eminesulekaraalp@gmail.com)', // Projene özel tanımlama
+        },
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['items'] ?? [];
-      } else if (response.statusCode == 503) {
-        print("Google sunucuları şu an yoğun (503). Lütfen tekrar deneyin.");
-        return [];
+
+        // Open Library arama sonuçlarını 'docs' dizisi içinde döndürür
+        final List docs = data['docs'] ?? [];
+
+        return docs.map((bookJson) => BookModel.fromJson(bookJson)).toList();
       } else {
-        print("Hata kodu: ${response.statusCode}, Mesaj: ${response.body}");
-        return [];
+        throw Exception('Kitaplar yüklenirken bir hata oluştu');
       }
     } catch (e) {
-      print("Bağlantı hatası: $e");
-      return [];
+      throw Exception('Bağlantı hatası: $e');
     }
   }
 }

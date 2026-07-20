@@ -107,7 +107,7 @@ class _BookListScreenState extends State<BookListScreen> {
       },
     );
   }
-//Bu endpointlerde sıkıntı olabilir
+
   Future<void> _showReviewsListDialog(BuildContext context, Map book) async {
     showDialog(
       context: context,

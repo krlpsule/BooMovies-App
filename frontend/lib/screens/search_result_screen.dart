@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // Provider paketi
 import 'home_screen.dart';
-import '../services/google_books_service.dart';
+import '../services/google_books_service.dart'; 
 import '../services/tmdb_service.dart';
 import '../services/internal_api_service.dart';
 import '../services/user_manager.dart'; // UserManager importu
@@ -17,7 +17,7 @@ class SearchResultsScreen extends StatelessWidget {
   });
 
   final InternalApiService _apiService = InternalApiService();
-  final GoogleBooksService _bookService = GoogleBooksService();
+  final OpenLibraryService _bookService = OpenLibraryService();
   final TmdbService _movieService = TmdbService();
 
   @override
@@ -43,15 +43,14 @@ class SearchResultsScreen extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
-              final title = searchType == 'book'
-                  ? item['volumeInfo']['title']
-                  : item['title'];
+
+            
+              final title = searchType == 'book' ? item.title : item['title'];
 
               return ListTile(
                 title: Text(title),
                 trailing: const Icon(Icons.add_circle_outline),
                 onTap: () async {
-                 
                   final int? currentUserId = context.read<UserManager>().userId;
 
                   if (currentUserId == null) {
@@ -64,17 +63,15 @@ class SearchResultsScreen extends StatelessWidget {
                   }
 
                   // 1. Veri Hazırlama
+                  // HATA DÜZELTİLDİ: BookModel özelliklerine uyumlu hale getirildi
                   final Map<String, dynamic> dataToSend = searchType == 'book'
                       ? {
-                          "Title": item['volumeInfo']['title'] ?? "Başlıksız",
-                          "Author":
-                              (item['volumeInfo']['authors'] ??
-                              ['Bilinmiyor'])[0],
+                          "Title": item.title ?? "Başlıksız",
+                          "Author": item.author ?? "Bilinmiyor",
                           "Genre":
-                              (item['volumeInfo']['categories'] ??
-                              ['Genel'])[0],
+                              "Genel", // Open Library search endpoint'i kategori garantisi vermez
                           "Summary":
-                              item['volumeInfo']['description'] ?? "Özet yok.",
+                              "Özet yok.", // Open Library search endpoint'i özet dönmez
                         }
                       : {
                           "Title": item['title'] ?? "Başlıksız",
