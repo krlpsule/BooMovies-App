@@ -173,6 +173,27 @@ class _BookListScreenState extends State<BookListScreen> {
     );
   }
 
+  Future<bool> _confirmDelete(BuildContext context, String title) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Kitabı Kaldır"),
+        content: Text("\"$title\" kitabını kütüphanenizden kaldırmak istediğinize emin misiniz? Bu kitaba yaptığınız yorumlar da silinecek."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text("İptal"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text("Kaldır", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final userManager = context.watch<UserManager>();
@@ -205,7 +226,36 @@ class _BookListScreenState extends State<BookListScreen> {
            
             final String? coverUrl = book['CoverUrl'];
 
-            return ListTile(
+            return Dismissible(
+              key: ValueKey(book['BookID']),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                color: Colors.red,
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: const Icon(Icons.delete, color: Colors.white),
+              ),
+              confirmDismiss: (direction) async {
+                return _confirmDelete(context, book['Title'] ?? 'Bu kitap');
+              },
+              onDismissed: (direction) async {
+                final success = await _apiService.removeFromLibrary(
+                  userId,
+                  book['BookID'],
+                );
+                if (!context.mounted) return;
+                setState(() => _loadLibrary(userId));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? "\"${book['Title']}\" kütüphaneden kaldırıldı."
+                          : "Kaldırırken bir hata oluştu.",
+                    ),
+                  ),
+                );
+              },
+              child: ListTile(
               // Görseli buraya ekliyoruz
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
@@ -260,6 +310,7 @@ class _BookListScreenState extends State<BookListScreen> {
                   ),
                 );
               },
+              ),
             );
           },
         );

@@ -9,9 +9,9 @@ class Book {
   final String author;
   final String genre;
   final String summary;
-  
+
   // Arayüzde göstereceğimiz kapak görseli için eklendi
-  final String? coverUrl; 
+  final String? coverUrl;
 
   Book({
     this.id,
@@ -29,16 +29,19 @@ class Book {
   // 2. DIŞ API MİMARİSİ: Open Library'den gelen veriyi Book nesnesine çevirmek için
   factory Book.fromOpenLibrary(Map<String, dynamic> json) {
     final coverId = json['cover_i'];
-    final cover = coverId != null 
-        ? 'https://covers.openlibrary.org/b/id/$coverId-L.jpg' 
+    final cover = coverId != null
+        ? 'https://covers.openlibrary.org/b/id/$coverId-L.jpg'
         : 'https://via.placeholder.com/400x600.png?text=Kapak+Yok';
 
     return Book(
       id: null, // Dış API'deki arama sonucunun bizim veritabanımızda henüz bir ID'si yok
       title: json['title'] ?? 'Bilinmeyen Kitap',
-      author: (json['author_name'] as List?)?.first ?? 'Bilinmeyen Yazar',
-      genre: 'Genel', // Open Library arama endpoint'i tür dönmez
-      summary: 'Özet bulunmuyor.', // Arama endpoint'i özet dönmez
+      author: (json['author_name'] as List?)?.isNotEmpty == true
+          ? (json['author_name'] as List).first.toString()
+          : '', // Boş bırakılıyor ki backend Gemini ile doldursun
+      genre:
+          '', // Open Library arama endpoint'i tür dönmez, backend Gemini ile doldurur
+      summary: '', // Arama endpoint'i özet dönmez, backend Gemini ile doldurur
       coverUrl: cover,
     );
   }

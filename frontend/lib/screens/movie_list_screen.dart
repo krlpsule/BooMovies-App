@@ -178,6 +178,29 @@ class _MovieListScreenState extends State<MovieListScreen> {
     );
   }
 
+  Future<bool> _confirmDelete(BuildContext context, String title) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Filmi Kaldır"),
+        content: Text(
+          "\"$title\" filmini listenizden kaldırmak istediğinize emin misiniz? Bu filme yaptığınız yorumlar da silinecek.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text("İptal"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text("Kaldır", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final userManager = context.watch<UserManager>();
@@ -210,66 +233,100 @@ class _MovieListScreenState extends State<MovieListScreen> {
             // Veritabanından gelen görsel URL'si (Backend'de 'PosterUrl' olarak tutulduğunu varsayıyoruz)
             final String? posterUrl = movie['PosterUrl'];
 
-            return ListTile(
-              // Film afişini buraya ekliyoruz
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.network(
-                  posterUrl ??
-                      'https://via.placeholder.com/500x750.png?text=Afis+Yok',
-                  width: 50,
-                  height: 75,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.movie, size: 40, color: Colors.blueGrey),
-                ),
+            return Dismissible(
+              key: ValueKey(movie['MovieID']),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                color: Colors.red,
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: const Icon(Icons.delete, color: Colors.white),
               ),
-              title: Text(movie['Title'] ?? 'Bilinmiyor'),
-              subtitle: Text("Puan: ${movie['Rating'] ?? 'Yok'}"),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.blueGrey),
-                    tooltip: "Yorum ekle / düzenle",
-                    onPressed: () => _showReviewDialog(context, movie, userId),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.comment_outlined,
-                      color: Colors.teal,
-                    ),
-                    tooltip: "Yapılan yorumları gör",
-                    onPressed: () => _showReviewsListDialog(context, movie),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.info_outline),
-                    tooltip: "Detayları ve yorumları gör",
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MovieReviewScreen(
-                            movieId: movie['MovieID'],
-                            title: movie['Title'],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MovieReviewScreen(
-                      movieId: movie['MovieID'],
-                      title: movie['Title'],
+              confirmDismiss: (direction) async {
+                return _confirmDelete(context, movie['Title'] ?? 'Bu film');
+              },
+              onDismissed: (direction) async {
+                final success = await _apiService.removeFromWatchlist(
+                  userId,
+                  movie['MovieID'],
+                );
+                if (!context.mounted) return;
+                setState(() => _loadWatchlist(userId));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? "\"${movie['Title']}\" listeden kaldırıldı."
+                          : "Kaldırırken bir hata oluştu.",
                     ),
                   ),
                 );
               },
+              child: ListTile(
+                // Film afişini buraya ekliyoruz
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.network(
+                    posterUrl ??
+                        'https://via.placeholder.com/500x750.png?text=Afis+Yok',
+                    width: 50,
+                    height: 75,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.movie,
+                      size: 40,
+                      color: Colors.blueGrey,
+                    ),
+                  ),
+                ),
+                title: Text(movie['Title'] ?? 'Bilinmiyor'),
+                subtitle: Text("Puan: ${movie['Rating'] ?? 'Yok'}"),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                      tooltip: "Yorum ekle / düzenle",
+                      onPressed: () =>
+                          _showReviewDialog(context, movie, userId),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.comment_outlined,
+                        color: Colors.teal,
+                      ),
+                      tooltip: "Yapılan yorumları gör",
+                      onPressed: () => _showReviewsListDialog(context, movie),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.info_outline),
+                      tooltip: "Detayları ve yorumları gör",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MovieReviewScreen(
+                              movieId: movie['MovieID'],
+                              title: movie['Title'],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MovieReviewScreen(
+                        movieId: movie['MovieID'],
+                        title: movie['Title'],
+                      ),
+                    ),
+                  );
+                },
+              ),
             );
           },
         );

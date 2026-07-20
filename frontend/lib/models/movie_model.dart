@@ -37,9 +37,12 @@ class Movie {
       id: null,
       title: json['title'] ?? 'Bilinmeyen Film',
       director:
-          'Bilinmeyen Yönetmen', // TMDB araması yönetmeni ana objede dönmez
-      genre: 'Film',
-      plot: json['overview'] ?? 'Özet yok.',
+          '', // TMDB araması yönetmeni ana objede dönmez, backend Gemini ile doldurur
+      genre:
+          '', // TMDB arama endpoint'i tür adı (metin) dönmez, backend Gemini ile doldurur
+      plot: (json['overview'] as String?)?.trim().isNotEmpty == true
+          ? json['overview']
+          : '', // Boşsa backend Gemini ile doldurur
       posterUrl: poster,
     );
   }

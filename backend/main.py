@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models
 from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate
+from gemini_service import enrich_book_info, enrich_movie_info
 
 # Veritabanı tablolarını oluştur
 models.Base.metadata.create_all(bind=engine)
@@ -63,27 +64,84 @@ def add_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
+# --- ARKA PLAN GÖREVLERİ (Gemini zenginleştirme, isteği yavaşlatmaması için) ---
+def _enrich_movie_in_background(movie_id: int, title: str, director: str, genre: str, plot: str):
+    enriched = enrich_movie_info(title, director, genre, plot)
+    db = SessionLocal()
+    try:
+        movie_row = db.query(models.Movie).filter(models.Movie.MovieID == movie_id).first()
+        if movie_row:
+            movie_row.Director = enriched["Director"]
+            movie_row.Genre = enriched["Genre"]
+            movie_row.Plot = enriched["Plot"]
+            db.commit()
+            print(f"Gemini zenginleştirme tamamlandı: MovieID={movie_id}")
+    finally:
+        db.close()
+
+def _enrich_book_in_background(book_id: int, title: str, author: str, genre: str, summary: str):
+    enriched = enrich_book_info(title, author, genre, summary)
+    db = SessionLocal()
+    try:
+        book_row = db.query(models.Book).filter(models.Book.BookID == book_id).first()
+        if book_row:
+            book_row.Author = enriched["Author"]
+            book_row.Genre = enriched["Genre"]
+            book_row.Summary = enriched["Summary"]
+            db.commit()
+            print(f"Gemini zenginleştirme tamamlandı: BookID={book_id}")
+    finally:
+        db.close()
+
 # --- CONTENT MANAGEMENT ---
 @app.post("/add_movie_if_not_exists")
-def add_movie_if_not_exists(movie: MovieCreate, db: Session = Depends(get_db)):   
+def add_movie_if_not_exists(movie: MovieCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     existing = db.query(models.Movie).filter(models.Movie.Title == movie.Title).first()
     if existing: return existing 
-    # YENİ: PosterUrl eklendi
-    new_movie = models.Movie(Title=movie.Title, Director=movie.Director, Genre=movie.Genre, Plot=movie.Plot, PosterUrl=movie.PosterUrl)
+
+    # Eldeki bilgilerle hemen kaydet, kullanıcı beklemesin
+    new_movie = models.Movie(
+        Title=movie.Title,
+        Director=movie.Director,
+        Genre=movie.Genre,
+        Plot=movie.Plot,
+        PosterUrl=movie.PosterUrl,
+    )
     db.add(new_movie)
     db.commit()
     db.refresh(new_movie)
+
+    # Eksik alanlar varsa (Director/Genre/Plot), Gemini zenginleştirmesini arka planda çalıştır
+    background_tasks.add_task(
+        _enrich_movie_in_background,
+        new_movie.MovieID, movie.Title, movie.Director, movie.Genre, movie.Plot,
+    )
+
     return new_movie
 
 @app.post("/add_book_if_not_exists")
-def add_book_if_not_exists(book: BookCreate, db: Session = Depends(get_db)):
+def add_book_if_not_exists(book: BookCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     existing = db.query(models.Book).filter(models.Book.Title == book.Title).first()
     if existing: return existing 
-    # YENİ: CoverUrl eklendi
-    new_book = models.Book(Title=book.Title, Author=book.Author, Genre=book.Genre, Summary=book.Summary, CoverUrl=book.CoverUrl)
+
+    # Eldeki bilgilerle hemen kaydet, kullanıcı beklemesin
+    new_book = models.Book(
+        Title=book.Title,
+        Author=book.Author,
+        Genre=book.Genre,
+        Summary=book.Summary,
+        CoverUrl=book.CoverUrl,
+    )
     db.add(new_book)
     db.commit()
     db.refresh(new_book)
+
+    # Eksik alanlar varsa (Author/Genre/Summary), Gemini zenginleştirmesini arka planda çalıştır
+    background_tasks.add_task(
+        _enrich_book_in_background,
+        new_book.BookID, book.Title, book.Author, book.Genre, book.Summary,
+    )
+
     return new_book
 
 # --- REVIEW ENDPOINTLERİ ---
@@ -121,6 +179,45 @@ def add_to_watchlist(entry: UserWatchlistCreate, db: Session = Depends(get_db)):
     db.add(new_entry)
     db.commit()
     return {"message": "Film listeye eklendi."}
+
+@app.delete("/remove_from_library/{user_id}/{book_id}")
+def remove_from_library(user_id: int, book_id: int, db: Session = Depends(get_db)):
+    entry = db.query(models.UserLibrary).filter(
+        models.UserLibrary.UserID == user_id,
+        models.UserLibrary.BookID == book_id,
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Kitap kütüphanenizde bulunamadı.")
+
+    # Kullanıcının bu kitaba yaptığı yorumları da temizle, bu sonradan değişebilir emin değilim
+    db.query(models.BookReview).filter(
+        models.BookReview.UserID == user_id,
+        models.BookReview.BookID == book_id,
+    ).delete()
+
+    db.delete(entry)
+    db.commit()
+    return {"message": "Kitap kütüphaneden kaldırıldı."}
+
+@app.delete("/remove_from_watchlist/{user_id}/{movie_id}")
+def remove_from_watchlist(user_id: int, movie_id: int, db: Session = Depends(get_db)):
+    entry = db.query(models.UserWatchlist).filter(
+        models.UserWatchlist.UserID == user_id,
+        models.UserWatchlist.MovieID == movie_id,
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Film listenizde bulunamadı.")
+
+    # Kullanıcının bu filme yaptığı yorumları da temizle, bu sonradan değişebilir emin değilim
+
+    db.query(models.MovieReview).filter(
+        models.MovieReview.UserID == user_id,
+        models.MovieReview.MovieID == movie_id,
+    ).delete()
+
+    db.delete(entry)
+    db.commit()
+    return {"message": "Film listeden kaldırıldı."}
 
 @app.get("/book/{book_id}/details")
 def get_book_details(book_id: int, db: Session = Depends(get_db)):

@@ -10,6 +10,7 @@ class MovieCreate(BaseModel):
     Director: str
     Genre: str
     Plot: str
+    PosterUrl: Optional[str] = None
 
 class BookCreate(BaseModel):
     Title: str
@@ -22,8 +23,7 @@ class UserCreate(BaseModel):
     NameSurname: str
     Username: str
     Email: str
-    Password_: str   
-    PosterUrl: Optional[str] = None 
+    Password_: str
 
 class BookReviewCreate(BaseModel):
     UserID: int
@@ -44,4 +44,4 @@ class UserLibraryCreate(BaseModel):
 
 class UserWatchlistCreate(BaseModel):
     UserID: int
-    MovieID: int    
+    MovieID: int

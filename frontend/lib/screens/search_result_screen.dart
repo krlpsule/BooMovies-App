@@ -91,21 +91,21 @@ class SearchResultsScreen extends StatelessWidget {
                   }
 
                   // 1. Veri Hazırlama (Nesne özelliklerine nokta ile erişim sağlandı)
-final Map<String, dynamic> dataToSend = searchType == 'book'
-    ? {
-        "Title": item.title ?? "Başlıksız",
-        "Author": item.author ?? "Bilinmiyor",
-        "Genre": "Genel",
-        "Summary": "Özet yok.",
-        "CoverUrl": item.coverUrl,
-      }
-    : {
-        "Title": item.title ?? "Başlıksız",
-        "Director": item.director ?? "Bilinmiyor",
-        "Genre": item.genre ?? "Film",
-        "Plot": item.plot ?? "Özet yok.",
-        "PosterUrl": item.posterUrl, 
-      };
+                  final Map<String, dynamic> dataToSend = searchType == 'book'
+                      ? {
+                          "Title": item.title ?? "Başlıksız",
+                          "Author": item.author,
+                          "Genre": item.genre,
+                          "Summary": item.summary,
+                          "CoverUrl": item.coverUrl,
+                        }
+                      : {
+                          "Title": item.title ?? "Başlıksız",
+                          "Director": item.director,
+                          "Genre": item.genre,
+                          "Plot": item.plot,
+                          "PosterUrl": item.posterUrl,
+                        };
 
                   try {
                     // 2. Aşama: Veritabanına Ekle

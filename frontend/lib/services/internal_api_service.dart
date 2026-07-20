@@ -122,7 +122,6 @@ class InternalApiService {
     }
     return [];
   }
- 
 
   // --- KULLANICI LİSTELERİNE EKLEME İŞLEMLERİ ---
 
@@ -162,6 +161,37 @@ class InternalApiService {
       return response.statusCode == 200;
     } catch (e) {
       print("İzleme listesine eklerken ağ veya kod hatası: $e");
+      return false;
+    }
+  }
+
+  // --- KULLANICI LİSTELERİNDEN SİLME İŞLEMLERİ ---
+  Future<bool> removeFromLibrary(int userId, int bookId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/remove_from_library/$userId/$bookId'),
+      );
+      print(
+        "Kütüphaneden silme yanıtı: ${response.statusCode} - ${response.body}",
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Kütüphaneden silerken hata: $e");
+      return false;
+    }
+  }
+
+  Future<bool> removeFromWatchlist(int userId, int movieId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/remove_from_watchlist/$userId/$movieId'),
+      );
+      print(
+        "İzleme listesinden silme yanıtı: ${response.statusCode} - ${response.body}",
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print("İzleme listesinden silerken hata: $e");
       return false;
     }
   }

@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/movie_model.dart'; // Film modelimizi ekliyoruz
+import '../models/movie_model.dart'; 
 
 class TmdbService {
   final String _apiKey = dotenv.env['TMDB_API_KEY'] ?? "";
   final String _baseUrl = "https://api.themoviedb.org/3";
 
-  // Dönüş tipini List<dynamic> yerine List<Movie> olarak güncelledik
+
   Future<List<Movie>> searchMovies(String query) async {
     if (_apiKey.isEmpty) {
       print("HATA: TMDB_API_KEY bulunamadı!");
