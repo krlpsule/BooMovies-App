@@ -5,11 +5,9 @@ import '../services/user_manager.dart';
 import '../screens/login_screen.dart';
 
 void main() async {
- 
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: ".env");
-
 
   runApp(
     MultiProvider(

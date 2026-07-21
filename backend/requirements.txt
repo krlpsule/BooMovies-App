@@ -5,3 +5,4 @@ pyodbc
 pydantic
 python-dotenv
 requests
+bcrypt

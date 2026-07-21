@@ -5,6 +5,7 @@ from database import SessionLocal, engine
 import models
 from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate, AiRecommendRequest
 from gemini_service import enrich_book_info, enrich_movie_info, recommend_books, recommend_movies
+from security import hash_password, verify_password, is_bcrypt_hash
 
 # Veritabanı tablolarını oluştur
 models.Base.metadata.create_all(bind=engine)
@@ -49,17 +50,36 @@ def get_movie_reviews(db: Session = Depends(get_db)):
 # --- AUTH & USER ---
 @app.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(
-        models.User.Username == user.Username, 
-        models.User.Password_ == user.Password_
-    ).first()
+    db_user = db.query(models.User).filter(models.User.Username == user.Username).first()
+
     if not db_user:
         raise HTTPException(status_code=400, detail="Hatalı kullanıcı adı veya şifre")
+
+    stored_password = db_user.Password_
+
+    if is_bcrypt_hash(stored_password):
+        # Normal durum: şifre zaten hash'lenmiş
+        password_ok = verify_password(user.Password_, stored_password)
+    else:
+        # Eski (hash'lenmemiş) hesap: düz metin karşılaştır, doğruysa sessizce hash'e geçir
+        password_ok = stored_password == user.Password_
+        if password_ok:
+            db_user.Password_ = hash_password(user.Password_)
+            db.commit()
+
+    if not password_ok:
+        raise HTTPException(status_code=400, detail="Hatalı kullanıcı adı veya şifre")
+
     return {"message": "Giriş başarılı", "UserID": db_user.UserID, "Username": db_user.Username}
 
 @app.post("/add_user")
 def add_user(user: UserCreate, db: Session = Depends(get_db)):
-    new_user = models.User(NameSurname=user.NameSurname, Username=user.Username, Email=user.Email, Password_=user.Password_) 
+    new_user = models.User(
+        NameSurname=user.NameSurname,
+        Username=user.Username,
+        Email=user.Email,
+        Password_=hash_password(user.Password_),
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

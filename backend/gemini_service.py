@@ -27,7 +27,7 @@ def _call_gemini(prompt: str, schema: dict) -> dict | None:
         "generationConfig": {
             "responseMimeType": "application/json",
             "responseSchema": schema,
-            "thinkingConfig": {"thinkingLevel": "low"},
+            "thinkingConfig": {"thinkingLevel": "LOW"},
         },
     }
 
