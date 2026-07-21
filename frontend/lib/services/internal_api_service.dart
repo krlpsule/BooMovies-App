@@ -196,6 +196,30 @@ class InternalApiService {
     }
   }
 
+  // --- YAPAY ZEKA ÖNERİ SİSTEMİ ---
+  Future<List<dynamic>> getAiRecommendations(
+    int userId,
+    String type, {
+    String prompt = "",
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/ai_recommend'),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"UserID": userId, "Type": type, "Prompt": prompt}),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['Recommendations'] ?? [];
+      }
+      print("AI öneri hatası: ${response.statusCode} - ${response.body}");
+      return [];
+    } catch (e) {
+      print("AI önerisi çekerken hata: $e");
+      return [];
+    }
+  }
+
   // --- KİTAP / FİLM DETAY + YORUMLARI ÇEKME ---
   Future<Map<String, dynamic>?> getBookDetails(int bookId) async {
     try {

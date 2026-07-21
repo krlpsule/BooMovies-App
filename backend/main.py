@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import SessionLocal, engine
 import models
-from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate
-from gemini_service import enrich_book_info, enrich_movie_info
+from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate, AiRecommendRequest
+from gemini_service import enrich_book_info, enrich_movie_info, recommend_books, recommend_movies
 
 # Veritabanı tablolarını oluştur
 models.Base.metadata.create_all(bind=engine)
@@ -349,3 +349,47 @@ def get_user_watchlist(user_id: int, db: Session = Depends(get_db)):
                 "PosterUrl": movie.PosterUrl
             })
     return result
+
+# --- YAPAY ZEKA ÖNERİ ENDPOINT'İ ---
+@app.post("/ai_recommend")
+def ai_recommend(payload: AiRecommendRequest, db: Session = Depends(get_db)):
+    if payload.Type == "book":
+        library = db.query(models.UserLibrary).filter(models.UserLibrary.UserID == payload.UserID).all()
+        items = []
+        for entry in library:
+            book = db.query(models.Book).filter(models.Book.BookID == entry.BookID).first()
+            if book:
+                review = db.query(models.BookReview).filter(
+                    models.BookReview.UserID == payload.UserID,
+                    models.BookReview.BookID == book.BookID,
+                ).first()
+                items.append({
+                    "title": book.Title,
+                    "author": book.Author,
+                    "genre": book.Genre,
+                    "rating": review.Rating if review else None,
+                })
+        recommendations = recommend_books(items, payload.Prompt or "")
+
+    elif payload.Type == "movie":
+        watchlist = db.query(models.UserWatchlist).filter(models.UserWatchlist.UserID == payload.UserID).all()
+        items = []
+        for entry in watchlist:
+            movie = db.query(models.Movie).filter(models.Movie.MovieID == entry.MovieID).first()
+            if movie:
+                review = db.query(models.MovieReview).filter(
+                    models.MovieReview.UserID == payload.UserID,
+                    models.MovieReview.MovieID == movie.MovieID,
+                ).first()
+                items.append({
+                    "title": movie.Title,
+                    "director": movie.Director,
+                    "genre": movie.Genre,
+                    "rating": review.Rating if review else None,
+                })
+        recommendations = recommend_movies(items, payload.Prompt or "")
+
+    else:
+        raise HTTPException(status_code=400, detail="Type alanı 'book' ya da 'movie' olmalı.")
+
+    return {"Recommendations": recommendations}

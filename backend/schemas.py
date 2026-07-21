@@ -45,3 +45,8 @@ class UserLibraryCreate(BaseModel):
 class UserWatchlistCreate(BaseModel):
     UserID: int
     MovieID: int
+
+class AiRecommendRequest(BaseModel):
+    UserID: int
+    Type: str  
+    Prompt: Optional[str] = ""
