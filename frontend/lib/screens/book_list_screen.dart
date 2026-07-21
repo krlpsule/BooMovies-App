@@ -22,8 +22,13 @@ class _BookListScreenState extends State<BookListScreen> {
   }
 
   Future<void> _showReviewDialog(BuildContext context, Map book, int userId) async {
-    final reviewController = TextEditingController();
-    int selectedRating = 0;
+    final bool alreadyReviewed = book['UserRating'] != null;
+    final reviewController = TextEditingController(
+      text: book['UserReviewText']?.toString() ?? '',
+    );
+    int selectedRating = alreadyReviewed
+        ? (book['UserRating'] as num).round()
+        : 0;
 
     await showDialog(
       context: context,
@@ -31,7 +36,11 @@ class _BookListScreenState extends State<BookListScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(book['Title'] ?? 'Kitap Yorumu'),
+              title: Text(
+                alreadyReviewed
+                    ? "${book['Title'] ?? 'Kitap'} - Yorumu Düzenle"
+                    : (book['Title'] ?? 'Kitap Yorumu'),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -98,7 +107,7 @@ class _BookListScreenState extends State<BookListScreen> {
                       );
                     }
                   },
-                  child: const Text("Kaydet"),
+                  child: Text(alreadyReviewed ? "Güncelle" : "Kaydet"),
                 ),
               ],
             );
@@ -259,16 +268,27 @@ class _BookListScreenState extends State<BookListScreen> {
               // Görseli buraya ekliyoruz
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: Image.network(
-                  coverUrl ?? 'https://via.placeholder.com/400x600.png?text=Kapak+Yok',
+                child: SizedBox(
                   width: 50,
                   height: 75,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 40, color: Colors.blueGrey),
+                  child: (coverUrl != null && coverUrl.isNotEmpty)
+                      ? Image.network(
+                          coverUrl,
+                          width: 50,
+                          height: 75,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.book, size: 40, color: Colors.blueGrey),
+                        )
+                      : const Icon(Icons.book, size: 40, color: Colors.blueGrey),
                 ),
               ),
               title: Text(book['Title'] ?? 'Başlıksız Kitap'),
-              subtitle: Text("Puan: ${book['Rating'] ?? '0'}"),
+              subtitle: Text(
+                book['AverageRating'] != null
+                    ? "Ortalama Puan: ${book['AverageRating']} ⭐"
+                    : "Puan yok",
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

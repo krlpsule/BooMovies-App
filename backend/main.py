@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import SessionLocal, engine
 import models
 from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate
@@ -147,6 +148,17 @@ def add_book_if_not_exists(book: BookCreate, background_tasks: BackgroundTasks, 
 # --- REVIEW ENDPOINTLERİ ---
 @app.post("/add_book_review")
 def add_book_review(review: BookReviewCreate, db: Session = Depends(get_db)):
+    existing = db.query(models.BookReview).filter(
+        models.BookReview.UserID == review.UserID,
+        models.BookReview.BookID == review.BookID,
+    ).first()
+    if existing:
+        existing.Rating = review.Rating
+        existing.ReviewText = review.ReviewText
+        db.commit()
+        db.refresh(existing)
+        return existing
+
     new_review = models.BookReview(UserID=review.UserID, BookID=review.BookID, Rating=review.Rating, ReviewText=review.ReviewText)
     db.add(new_review)
     db.commit()
@@ -155,6 +167,17 @@ def add_book_review(review: BookReviewCreate, db: Session = Depends(get_db)):
 
 @app.post("/add_movie_review")
 def add_movie_review(review: MovieReviewCreate, db: Session = Depends(get_db)):
+    existing = db.query(models.MovieReview).filter(
+        models.MovieReview.UserID == review.UserID,
+        models.MovieReview.MovieID == review.MovieID,
+    ).first()
+    if existing:
+        existing.Rating = review.Rating
+        existing.ReviewText = review.ReviewText
+        db.commit()
+        db.refresh(existing)
+        return existing
+
     new_review = models.MovieReview(UserID=review.UserID, MovieID=review.MovieID, Rating=review.Rating, ReviewText=review.ReviewText)
     db.add(new_review)
     db.commit()
@@ -282,14 +305,22 @@ def get_user_library(user_id: int, db: Session = Depends(get_db)):
     for entry in library:
         book = db.query(models.Book).filter(models.Book.BookID == entry.BookID).first()
         if book:
-            review = db.query(models.BookReview).filter(models.BookReview.UserID == user_id, models.BookReview.BookID == entry.BookID).first()
-           
+            avg_rating = db.query(func.avg(models.BookReview.Rating)).filter(
+                models.BookReview.BookID == book.BookID
+            ).scalar()
+            own_review = db.query(models.BookReview).filter(
+                models.BookReview.UserID == user_id,
+                models.BookReview.BookID == book.BookID,
+            ).first()
+
             result.append({
-                "BookID": book.BookID, 
-                "Title": book.Title, 
-                "Author": book.Author, 
-                "Rating": review.Rating if review else "Yok",
-                "CoverUrl": book.CoverUrl 
+                "BookID": book.BookID,
+                "Title": book.Title,
+                "Author": book.Author,
+                "AverageRating": round(avg_rating, 1) if avg_rating is not None else None,
+                "UserRating": own_review.Rating if own_review else None,
+                "UserReviewText": own_review.ReviewText if own_review else None,
+                "CoverUrl": book.CoverUrl
             })
     return result
 
@@ -300,13 +331,21 @@ def get_user_watchlist(user_id: int, db: Session = Depends(get_db)):
     for entry in watchlist:
         movie = db.query(models.Movie).filter(models.Movie.MovieID == entry.MovieID).first()
         if movie:
-            review = db.query(models.MovieReview).filter(models.MovieReview.UserID == user_id, models.MovieReview.MovieID == entry.MovieID).first()
-            
+            avg_rating = db.query(func.avg(models.MovieReview.Rating)).filter(
+                models.MovieReview.MovieID == movie.MovieID
+            ).scalar()
+            own_review = db.query(models.MovieReview).filter(
+                models.MovieReview.UserID == user_id,
+                models.MovieReview.MovieID == movie.MovieID,
+            ).first()
+
             result.append({
-                "MovieID": movie.MovieID, 
-                "Title": movie.Title, 
-                "Director": movie.Director, 
-                "Rating": review.Rating if review else "Yok",
+                "MovieID": movie.MovieID,
+                "Title": movie.Title,
+                "Director": movie.Director,
+                "AverageRating": round(avg_rating, 1) if avg_rating is not None else None,
+                "UserRating": own_review.Rating if own_review else None,
+                "UserReviewText": own_review.ReviewText if own_review else None,
                 "PosterUrl": movie.PosterUrl
             })
     return result

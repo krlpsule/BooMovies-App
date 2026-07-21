@@ -29,20 +29,20 @@ class Movie {
   // 2. DIŞ API MİMARİSİ: TMDB'den gelen veriyi Movie nesnesine çevirmek için
   factory Movie.fromTmdb(Map<String, dynamic> json) {
     final String? posterPath = json['poster_path'];
-    final String poster = posterPath != null
+    final String? poster = posterPath != null
         ? 'https://image.tmdb.org/t/p/w500$posterPath'
-        : 'https://via.placeholder.com/500x750.png?text=Afis+Yok';
+        : null; 
 
     return Movie(
       id: null,
       title: json['title'] ?? 'Bilinmeyen Film',
       director:
-          '', // TMDB araması yönetmeni ana objede dönmez, backend Gemini ile doldurur
+          '', 
       genre:
-          '', // TMDB arama endpoint'i tür adı (metin) dönmez, backend Gemini ile doldurur
+          '', 
       plot: (json['overview'] as String?)?.trim().isNotEmpty == true
           ? json['overview']
-          : '', // Boşsa backend Gemini ile doldurur
+          : '', 
       posterUrl: poster,
     );
   }

@@ -26,8 +26,13 @@ class _MovieListScreenState extends State<MovieListScreen> {
     Map movie,
     int userId,
   ) async {
-    final reviewController = TextEditingController();
-    int selectedRating = 0;
+    final bool alreadyReviewed = movie['UserRating'] != null;
+    final reviewController = TextEditingController(
+      text: movie['UserReviewText']?.toString() ?? '',
+    );
+    int selectedRating = alreadyReviewed
+        ? (movie['UserRating'] as num).round()
+        : 0;
 
     await showDialog(
       context: context,
@@ -35,7 +40,11 @@ class _MovieListScreenState extends State<MovieListScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(movie['Title'] ?? 'Film Yorumu'),
+              title: Text(
+                alreadyReviewed
+                    ? "${movie['Title'] ?? 'Film'} - Yorumu Düzenle"
+                    : (movie['Title'] ?? 'Film Yorumu'),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -102,7 +111,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
                       ).showSnackBar(SnackBar(content: Text("Hata: $e")));
                     }
                   },
-                  child: const Text("Kaydet"),
+                  child: Text(alreadyReviewed ? "Güncelle" : "Kaydet"),
                 ),
               ],
             );
@@ -266,21 +275,35 @@ class _MovieListScreenState extends State<MovieListScreen> {
                 // Film afişini buraya ekliyoruz
                 leading: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: Image.network(
-                    posterUrl ??
-                        'https://via.placeholder.com/500x750.png?text=Afis+Yok',
+                  child: SizedBox(
                     width: 50,
                     height: 75,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.movie,
-                      size: 40,
-                      color: Colors.blueGrey,
-                    ),
+                    child: (posterUrl != null && posterUrl.isNotEmpty)
+                        ? Image.network(
+                            posterUrl,
+                            width: 50,
+                            height: 75,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.movie,
+                                  size: 40,
+                                  color: Colors.blueGrey,
+                                ),
+                          )
+                        : const Icon(
+                            Icons.movie,
+                            size: 40,
+                            color: Colors.blueGrey,
+                          ),
                   ),
                 ),
                 title: Text(movie['Title'] ?? 'Bilinmiyor'),
-                subtitle: Text("Puan: ${movie['Rating'] ?? 'Yok'}"),
+                subtitle: Text(
+                  movie['AverageRating'] != null
+                      ? "Ortalama Puan: ${movie['AverageRating']} ⭐"
+                      : "Puan yok",
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
