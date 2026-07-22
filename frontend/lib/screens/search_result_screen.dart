@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'home_screen.dart';
 import '../services/google_books_service.dart';
 import '../services/tmdb_service.dart';
-import '../services/internal_api_service.dart';
-import '../services/user_manager.dart';
+import '../utils/content_actions.dart';
 
 class SearchResultsScreen extends StatelessWidget {
   final String query;
@@ -16,7 +13,6 @@ class SearchResultsScreen extends StatelessWidget {
     required this.searchType,
   });
 
-  final InternalApiService _apiService = InternalApiService();
   final OpenLibraryService _bookService = OpenLibraryService();
   final TmdbService _movieService = TmdbService();
 
@@ -67,7 +63,6 @@ class SearchResultsScreen extends StatelessWidget {
 
                 title: Text(title),
 
-                // Alt başlıkta yazar veya yönetmen bilgisini gösteriyoruz
                 subtitle: Text(
                   searchType == 'book'
                       ? (item.author ?? 'Bilinmeyen Yazar')
@@ -78,90 +73,11 @@ class SearchResultsScreen extends StatelessWidget {
 
                 trailing: const Icon(Icons.add_circle_outline),
 
-                onTap: () async {
-                  final int? currentUserId = context.read<UserManager>().userId;
-
-                  if (currentUserId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Oturum bulunamadı. Lütfen giriş yapın."),
-                      ),
-                    );
-                    return;
-                  }
-
-                  // 1. Veri Hazırlama (Nesne özelliklerine nokta ile erişim sağlandı)
-                  final Map<String, dynamic> dataToSend = searchType == 'book'
-                      ? {
-                          "Title": item.title ?? "Başlıksız",
-                          "Author": item.author,
-                          "Genre": item.genre,
-                          "Summary": item.summary,
-                          "CoverUrl": item.coverUrl,
-                        }
-                      : {
-                          "Title": item.title ?? "Başlıksız",
-                          "Director": item.director,
-                          "Genre": item.genre,
-                          "Plot": item.plot,
-                          "PosterUrl": item.posterUrl,
-                        };
-
-                  try {
-                    // 2. Aşama: Veritabanına Ekle
-                    final result = searchType == 'book'
-                        ? await _apiService.addOrGetBook(dataToSend)
-                        : await _apiService.addOrGetMovie(dataToSend);
-
-                    if (result != null) {
-                      bool isAddedToList = false;
-
-                      // 3. Aşama: Kullanıcı Listesine Ekle
-                      if (searchType == 'book') {
-                        isAddedToList = await _apiService.addToLibrary(
-                          currentUserId,
-                          result['BookID'],
-                        );
-                      } else {
-                        isAddedToList = await _apiService.addToWatchlist(
-                          currentUserId,
-                          result['MovieID'],
-                        );
-                      }
-
-                      // 4. Aşama: Başarılıysa Yönlendir
-                      if (isAddedToList && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("$title listenize eklendi!")),
-                        );
-
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => HomeScreen(
-                              initialIndex: searchType == 'book' ? 0 : 1,
-                            ),
-                          ),
-                          (route) => false,
-                        );
-                      } else if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Bu içerik zaten listenizde."),
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Kaydederken bir hata oluştu!"),
-                        ),
-                      );
-                    }
-                  }
-                },
+                onTap: () => addItemToUserList(
+                  context: context,
+                  item: item,
+                  searchType: searchType,
+                ),
               );
             },
           );

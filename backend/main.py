@@ -4,7 +4,7 @@ from sqlalchemy import func
 from database import SessionLocal, engine
 import models
 from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate, AiRecommendRequest
-from gemini_service import enrich_book_info, enrich_movie_info, recommend_books, recommend_movies
+from groq_service import enrich_book_info, enrich_movie_info, recommend_books, recommend_movies
 from security import hash_password, verify_password, is_bcrypt_hash
 
 # Veritabanı tablolarını oluştur
@@ -96,7 +96,7 @@ def _enrich_movie_in_background(movie_id: int, title: str, director: str, genre:
             movie_row.Genre = enriched["Genre"]
             movie_row.Plot = enriched["Plot"]
             db.commit()
-            print(f"Gemini zenginleştirme tamamlandı: MovieID={movie_id}")
+            print(f"Groq zenginleştirme tamamlandı: MovieID={movie_id}")
     finally:
         db.close()
 
@@ -110,7 +110,7 @@ def _enrich_book_in_background(book_id: int, title: str, author: str, genre: str
             book_row.Genre = enriched["Genre"]
             book_row.Summary = enriched["Summary"]
             db.commit()
-            print(f"Gemini zenginleştirme tamamlandı: BookID={book_id}")
+            print(f"Groq zenginleştirme tamamlandı: BookID={book_id}")
     finally:
         db.close()
 
@@ -132,7 +132,7 @@ def add_movie_if_not_exists(movie: MovieCreate, background_tasks: BackgroundTask
     db.commit()
     db.refresh(new_movie)
 
-    # Eksik alanlar varsa (Director/Genre/Plot), Gemini zenginleştirmesini arka planda çalıştır
+    # Eksik alanlar varsa (Director/Genre/Plot), Groq zenginleştirmesini arka planda çalıştır
     background_tasks.add_task(
         _enrich_movie_in_background,
         new_movie.MovieID, movie.Title, movie.Director, movie.Genre, movie.Plot,
@@ -157,7 +157,7 @@ def add_book_if_not_exists(book: BookCreate, background_tasks: BackgroundTasks, 
     db.commit()
     db.refresh(new_book)
 
-    # Eksik alanlar varsa (Author/Genre/Summary), Gemini zenginleştirmesini arka planda çalıştır
+    # Eksik alanlar varsa (Author/Genre/Summary), Groq zenginleştirmesini arka planda çalıştır
     background_tasks.add_task(
         _enrich_book_in_background,
         new_book.BookID, book.Title, book.Author, book.Genre, book.Summary,
