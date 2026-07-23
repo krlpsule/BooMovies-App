@@ -38,6 +38,32 @@ class InternalApiService {
     if (response.statusCode != 200) throw Exception('Kayıt oluşturulamadı!');
   }
 
+  // --- ŞİFRE GÜNCELLEME ---
+  Future<void> changePassword(
+    int userId,
+    String oldPassword,
+    String newPassword,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/change_password'),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({
+        "UserID": userId,
+        "OldPassword": oldPassword,
+        "NewPassword": newPassword,
+      }),
+    );
+    if (response.statusCode != 200) {
+      String message = 'Şifre güncellenemedi.';
+      try {
+        final data = json.decode(response.body);
+        if (data['detail'] != null) message = data['detail'];
+      } catch (_) {
+      }
+      throw Exception(message);
+    }
+  }
+
   // --- KİTAP VE FİLM VERİ EKLEME ---
   Future<Map<String, dynamic>> addOrGetBook(
     Map<String, dynamic> bookData,

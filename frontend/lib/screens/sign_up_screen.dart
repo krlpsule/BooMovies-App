@@ -37,9 +37,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         }
       } catch (e) {
         if (mounted) {
+          final cleanMessage = e.toString().replaceFirst('Exception: ', '');
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text("Kayıt başarısız: $e")));
+          ).showSnackBar(SnackBar(content: Text(cleanMessage)));
         }
       } finally {
         if (mounted) {

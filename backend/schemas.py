@@ -50,3 +50,8 @@ class AiRecommendRequest(BaseModel):
     UserID: int
     Type: str  
     Prompt: Optional[str] = ""
+
+class ChangePasswordRequest(BaseModel):
+    UserID: int
+    OldPassword: str
+    NewPassword: str

@@ -309,7 +309,6 @@ class _MovieListScreenState extends State<MovieListScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.edit, color: Colors.blueGrey),
-                      tooltip: "Yorum ekle / düzenle",
                       onPressed: () =>
                           _showReviewDialog(context, movie, userId),
                     ),
@@ -318,12 +317,10 @@ class _MovieListScreenState extends State<MovieListScreen> {
                         Icons.comment_outlined,
                         color: Colors.teal,
                       ),
-                      tooltip: "Yapılan yorumları gör",
                       onPressed: () => _showReviewsListDialog(context, movie),
                     ),
                     IconButton(
                       icon: const Icon(Icons.info_outline),
-                      tooltip: "Detayları ve yorumları gör",
                       onPressed: () {
                         Navigator.push(
                           context,

@@ -294,17 +294,14 @@ class _BookListScreenState extends State<BookListScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.blueGrey),
-                    tooltip: "Yorum ekle / düzenle",
                     onPressed: () => _showReviewDialog(context, book, userId),
                   ),
                   IconButton(
                     icon: const Icon(Icons.comment_outlined, color: Colors.teal),
-                    tooltip: "Yapılan yorumları gör",
                     onPressed: () => _showReviewsListDialog(context, book),
                   ),
                   IconButton(
                     icon: const Icon(Icons.info_outline),
-                    tooltip: "Detayları ve yorumları gör",
                     onPressed: () {
                       Navigator.push(
                         context,

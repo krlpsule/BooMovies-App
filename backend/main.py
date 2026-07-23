@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import SessionLocal, engine
 import models
-from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate, AiRecommendRequest
+from schemas import UserCreate, MovieCreate, BookCreate, BookReviewCreate, MovieReviewCreate, UserLibraryCreate, UserLogin, UserWatchlistCreate, AiRecommendRequest, ChangePasswordRequest
 from groq_service import enrich_book_info, enrich_movie_info, recommend_books, recommend_movies
 from security import hash_password, verify_password, is_bcrypt_hash
 
@@ -84,6 +84,33 @@ def add_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+@app.post("/change_password")
+def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.UserID == payload.UserID).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+
+    stored_password = db_user.Password_
+    if is_bcrypt_hash(stored_password):
+        old_password_ok = verify_password(payload.OldPassword, stored_password)
+    else:
+        #Herhangi bir sebepten ötürü eski şifre hash'lenmemişse, düz metin karşılaştırması yap
+        old_password_ok = stored_password == payload.OldPassword
+
+    if not old_password_ok:
+        raise HTTPException(status_code=400, detail="Mevcut şifreniz hatalı.")
+
+    if len(payload.NewPassword) < 6:
+        raise HTTPException(status_code=400, detail="Yeni şifre en az 6 karakter olmalı.")
+
+    if payload.NewPassword == payload.OldPassword:
+        raise HTTPException(status_code=400, detail="Yeni şifre eski şifreyle aynı olamaz.")
+
+    db_user.Password_ = hash_password(payload.NewPassword)
+    db.commit()
+
+    return {"message": "Şifreniz başarıyla güncellendi."}
 
 # --- ARKA PLAN GÖREVLERİ (Gemini zenginleştirme, isteği yavaşlatmaması için) ---
 def _enrich_movie_in_background(movie_id: int, title: str, director: str, genre: str, plot: str):
